@@ -1,0 +1,8 @@
+# Google Services
+google-services.json
+
+# Gradle files
+*.gradle
+*.gradle.kts
+.gradle/
+/build/

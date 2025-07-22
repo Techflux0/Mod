@@ -1,0 +1,12 @@
+google-services.json
+/google-services.json
+# Gradle files
+*.gradle
+*.gradle.kts
+.gradle/
+.vscode/
+.idea/
+*.iml
+/local.properties
+/captures/
+/build
