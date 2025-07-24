@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp"
+    android:background="#F9F9F9">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:padding="16dp"
+        android:elevation="4dp"
+        android:layout_margin="8dp"
+        android:layout_gravity="center"
+        android:clipToPadding="false">
+
+        <!-- Mod Name -->
+        <EditText
+            android:id="@+id/et_mod_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Mod Name"
+            android:inputType="textCapWords"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Mod Version -->
+        <EditText
+            android:id="@+id/et_mod_version"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Version"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Description -->
+        <EditText
+            android:id="@+id/et_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Description"
+            android:minLines="3"
+            android:maxLines="5"
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Features -->
+        <EditText
+            android:id="@+id/et_features"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Features (comma-separated)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Architecture -->
+        <RadioGroup
+            android:id="@+id/arch_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+            <RadioButton
+                android:id="@+id/radio_arm64"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ARM64" />
+            <RadioButton
+                android:id="@+id/radio_arm32"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ARM32"
+                android:layout_marginStart="24dp" />
+        </RadioGroup>
+
+        <!-- Mod File Picker -->
+        <Button
+            android:id="@+id/btn_select_apk"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Choose APK File"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Display APK path -->
+        <TextView
+            android:id="@+id/tv_apk_path"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No APK selected"
+            android:textColor="#888888"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Image Upload Button (optional) -->
+        <Button
+            android:id="@+id/btn_select_image"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Choose Mod Icon (Optional)"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Display Image path -->
+        <TextView
+            android:id="@+id/tv_image_path"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No image selected"
+            android:textColor="#888888"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Upload Button -->
+        <Button
+            android:id="@+id/btn_upload"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Upload Mod"
+            android:backgroundTint="#009688"
+            android:textColor="#FFF" />
+
+    </LinearLayout>
+</ScrollView>

@@ -50,7 +50,11 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Games", Toast.LENGTH_SHORT).show();
                     return true;
                 } else if (itemId == R.id.nav_upload) {
-                    Toast.makeText(MainActivity.this, "Upload", Toast.LENGTH_SHORT).show();
+                    getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.fragment_container, new UploadFragment())
+                            .addToBackStack(null)
+                            .commit();
                     return true;
                 } else if (itemId == R.id.nav_downloads) {
                     Toast.makeText(MainActivity.this, "Downloads", Toast.LENGTH_SHORT).show();

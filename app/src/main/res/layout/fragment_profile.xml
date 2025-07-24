@@ -22,7 +22,7 @@
             android:id="@+id/profile_email"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Email: user@example.com"
+            android:text="Email: ---"
             android:textStyle="bold"
             android:textColor="#000"
             android:textSize="18sp"
@@ -32,7 +32,7 @@
             android:id="@+id/profile_premium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Premium: false"
+            android:text="Premium: ---"
             android:textColor="#333"
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />
@@ -41,7 +41,7 @@
             android:id="@+id/profile_downloads"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Downloads: 0"
+            android:text="Downloads: ---"
             android:textColor="#333"
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />
