@@ -1,10 +1,13 @@
 package io.mods;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.gms.auth.api.signin.*;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
@@ -12,7 +15,7 @@ import com.google.android.gms.common.SignInButton;
 import com.google.firebase.auth.*;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.SetOptions;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,7 +33,7 @@ public class LoginActivity extends AppCompatActivity {
         firebaseAuth = FirebaseAuth.getInstance();
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id)) // Make sure this exists in strings.xml
+                .requestIdToken(getString(R.string.default_web_client_id)) // Ensure this key is present
                 .requestEmail()
                 .build();
 
@@ -54,9 +57,8 @@ public class LoginActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account);
             } catch (ApiException e) {
-                Log.e("GOOGLE_SIGN_IN", "Error code: " + e.getStatusCode()); // Log the exact error
+                Log.e("GOOGLE_SIGN_IN", "Error code: " + e.getStatusCode());
                 Toast.makeText(this, "Google Sign-In failed: " + e.getStatusCode(), Toast.LENGTH_SHORT).show();
-
             }
         }
     }
@@ -69,24 +71,39 @@ private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
             if (task.isSuccessful()) {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
-                    // Create user document with required fields
-                    Map<String, Object> userData = new HashMap<>();
-                    userData.put("email", user.getEmail());
-                    userData.put("uid", user.getUid());
-                    userData.put("premium", false);
-                    userData.put("downloads", 0);
-                    userData.put("timestamp", FieldValue.serverTimestamp());
+                    FirebaseFirestore db = FirebaseFirestore.getInstance();
+                    String uid = user.getUid();
 
-                    FirebaseFirestore.getInstance()
-                        .collection("users")
-                        .document(user.getUid())
-                        .set(userData, SetOptions.merge())
-                        .addOnSuccessListener(aVoid -> {
-                            startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                            finish();
+                    // Check if document exists
+                    db.collection("users").document(uid).get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (!documentSnapshot.exists()) {
+                                // User does not exist → create new user data
+                                Map<String, Object> userData = new HashMap<>();
+                                userData.put("email", user.getEmail());
+                                userData.put("uid", uid);
+                                userData.put("premium", false);
+                                userData.put("downloads", 0);
+                                userData.put("createdAt", FieldValue.serverTimestamp());
+
+                                db.collection("users").document(uid).set(userData)
+                                    .addOnSuccessListener(aVoid -> {
+                                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                        finish();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Toast.makeText(this, "Failed to save user data", Toast.LENGTH_SHORT).show();
+                                        Log.e("FIRESTORE_ERROR", "Save failed", e);
+                                    });
+                            } else {
+                                // User exists → go straight to main
+                                startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                finish();
+                            }
                         })
                         .addOnFailureListener(e -> {
-                            Toast.makeText(this, "Failed to create user profile", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Error checking user", Toast.LENGTH_SHORT).show();
+                            Log.e("FIRESTORE_CHECK_ERROR", "User doc check failed", e);
                         });
                 }
             } else {

@@ -22,3 +22,9 @@
 -packageobfuscationdictionary ConfusionDictionary.txt
 -classobfuscationdictionary ConfusionDictionary.txt
 -obfuscationdictionary ConfusionDictionary.txt
+-keep class androidx.datastore.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+-keepclassmembers class * {
+    @androidx.annotation.Keep <fields>;
+    @androidx.annotation.Keep <methods>;
+}

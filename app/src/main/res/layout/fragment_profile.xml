@@ -1,14 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:background="#FAFAFA">
 
-    <TextView
-        android:id="@+id/profile_email"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Loading..."
-        android:textSize="20sp"
-        android:textColor="#000" />
-</FrameLayout>
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:elevation="4dp"
+        android:padding="20dp"
+        android:layout_margin="8dp"
+        android:backgroundTint="#FFFFFF"
+        android:clipToPadding="false"
+        android:layout_marginTop="20dp"
+        android:radius="12dp">
+
+        <TextView
+            android:id="@+id/profile_email"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Email: user@example.com"
+            android:textStyle="bold"
+            android:textColor="#000"
+            android:textSize="18sp"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/profile_premium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Premium: false"
+            android:textColor="#333"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/profile_downloads"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Downloads: 0"
+            android:textColor="#333"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/profile_joined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Joined: --"
+            android:textColor="#333"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/btn_logout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Logout"
+            android:layout_marginTop="24dp" />
+
+
+    </LinearLayout>
+</ScrollView>
