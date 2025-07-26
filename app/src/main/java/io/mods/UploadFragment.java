@@ -1,4 +1,5 @@
 package io.mods;
+
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -9,21 +10,20 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
-
+import android.database.Cursor;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-
+import android.provider.OpenableColumns;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentReference;
-
 import org.json.JSONObject;
-
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -36,6 +36,7 @@ public class UploadFragment extends Fragment {
     private Button selectImage, selectApk, uploadBtn;
     private TextView selectedImageText, selectedApkText;
     private Uri imageUri, apkUri;
+    private ProgressDialog uploadProgressDialog;
 
     private final String imgbbApiKey = "55ff84fd00968e159a31fe769343ef0e";
     private final String pixelDrainApiKey = "4b7ef806-f072-47cf-8410-44854fe185ce";
@@ -103,13 +104,32 @@ public class UploadFragment extends Fragment {
     }
 
     private void uploadMod() {
-        ProgressDialog progress = ProgressDialog.show(getContext(), "Uploading", "Please wait...");
-    
+        uploadProgressDialog = new ProgressDialog(getContext());
+        uploadProgressDialog.setTitle("Uploading");
+        uploadProgressDialog.setMessage("Please wait...");
+        uploadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        uploadProgressDialog.setCancelable(false);
+        uploadProgressDialog.show();
+
         new Thread(() -> {
             try {
                 String base64Image = convertToBase64(imageUri);
                 String imageUrl = uploadToImgbb(base64Image);
+                
+                // Update progress for image upload
+                requireActivity().runOnUiThread(() -> {
+                    uploadProgressDialog.setMessage("Uploading APK...");
+                    uploadProgressDialog.setProgress(33);
+                });
+                
                 String apkUrl = uploadToPixelDrain(apkUri);
+                
+                // Update progress for APK upload
+                requireActivity().runOnUiThread(() -> {
+                    uploadProgressDialog.setMessage("Saving data...");
+                    uploadProgressDialog.setProgress(66);
+                });
+
                 String size = getFileSize(apkUri);
                 String architecture = size.contains("arm64") ? "arm64" : "arm32";
                 String createdAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
@@ -130,12 +150,11 @@ public class UploadFragment extends Fragment {
                 DocumentReference ref = db.collection("mods").document();
                 modData.put("id", ref.getId());
                 ref.set(modData).addOnSuccessListener(aVoid -> {
-                    progress.dismiss();
+                    uploadProgressDialog.dismiss();
                     requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Upload complete", Toast.LENGTH_SHORT).show());
                 });
             } catch (Exception e) {
-                progress.dismiss();
-                e.printStackTrace();
+                uploadProgressDialog.dismiss();
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
@@ -150,156 +169,111 @@ public class UploadFragment extends Fragment {
     }
 
     private String uploadToImgbb(String base64Image) throws Exception {
-        String apiKey = imgbbApiKey;
         String urlString = "https://api.imgbb.com/1/upload";
-
-        URL url = new URL(urlString);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = (HttpURLConnection) new URL(urlString).openConnection();
 
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-        String data = "key=" + URLEncoder.encode(apiKey, "UTF-8") +
-                      "&image=" + URLEncoder.encode(base64Image, "UTF-8");
+        String data = "key=" + URLEncoder.encode(imgbbApiKey, "UTF-8") +
+                     "&image=" + URLEncoder.encode(base64Image, "UTF-8");
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(data.getBytes());
-            os.flush();
         }
 
-        int responseCode = conn.getResponseCode();
-        if (responseCode == 200) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
+        if (conn.getResponseCode() == 200) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                return new JSONObject(reader.readLine()).getJSONObject("data").getString("url");
             }
-            reader.close();
-
-            JSONObject json = new JSONObject(response.toString());
-            return json.getJSONObject("data").getString("url");
         } else {
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-            StringBuilder error = new StringBuilder();
-            String line;
-            while ((line = errorReader.readLine()) != null) {
-                error.append(line);
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
+                throw new IOException("IMGBB upload failed: " + reader.readLine());
             }
-            errorReader.close();
-
-            throw new IOException("IMGBB upload failed (code " + responseCode + "): " + error.toString());
         }
     }
 
-private String uploadToPixelDrain(Uri uri) throws Exception {
-    String apiKey = pixelDrainApiKey;
-    InputStream fileStream = null;
-    HttpURLConnection conn = null;
-
-    try {
-        fileStream = requireActivity().getContentResolver().openInputStream(uri);
-        if (fileStream == null || fileStream.available() <= 0) {
-            throw new IOException("APK file is missing or empty.");
+    private String uploadToPixelDrain(Uri uri) throws Exception {
+        String filename = getFileNameFromUri(uri);
+        long fileSize;
+        
+        try (InputStream sizeStream = requireActivity().getContentResolver().openInputStream(uri)) {
+            fileSize = sizeStream.available();
+            if (fileSize <= 0) throw new IOException("File is empty");
         }
 
-        // First attempt to upload
-        URL url = new URL("https://pixeldrain.com/api/file/");
-        conn = (HttpURLConnection) url.openConnection();
-        conn.setInstanceFollowRedirects(false); // Handle redirect manually
-        conn.setRequestMethod("PUT");
-        conn.setDoOutput(true);
-        conn.setUseCaches(false);
-        conn.setConnectTimeout(30000);
-        conn.setReadTimeout(30000);
-
-        String auth = "Basic " + Base64.encodeToString((":" + apiKey).getBytes(), Base64.NO_WRAP);
-        conn.setRequestProperty("Authorization", auth);
-        conn.setRequestProperty("Content-Type", "application/octet-stream");
-        conn.setRequestProperty("Accept", "application/json");
-
-        // Don't send the body yet — check for redirect first
-        conn.connect();
-        int responseCode = conn.getResponseCode();
-
-        if (responseCode == 307) {
-            String redirectUrl = conn.getHeaderField("Location");
-            if (redirectUrl == null) throw new IOException("Redirect URL not found");
-
-            conn.disconnect(); // Close the initial connection
-
-            // Prepare redirected upload
-            fileStream.close();
-            fileStream = requireActivity().getContentResolver().openInputStream(uri);
-
-URL redirect = new URL(url, redirectUrl);
-conn = (HttpURLConnection) redirect.openConnection();
-
-
-            conn.setRequestMethod("PUT");
+        String boundary = "Boundary-" + System.currentTimeMillis();
+        HttpURLConnection conn = (HttpURLConnection) new URL("https://pixeldrain.com/api/file").openConnection();
+        
+        try {
+            conn.setRequestMethod("POST");
             conn.setDoOutput(true);
-            conn.setConnectTimeout(30000);
+            conn.setRequestProperty("Authorization", "Basic " + Base64.encodeToString((":" + pixelDrainApiKey).getBytes(), Base64.NO_WRAP));
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            conn.setConnectTimeout(15000);
             conn.setReadTimeout(30000);
-            conn.setRequestProperty("Authorization", auth);
-            conn.setRequestProperty("Content-Type", "application/octet-stream");
-            conn.setRequestProperty("Accept", "application/json");
 
-            try (OutputStream os = conn.getOutputStream()) {
+            try (OutputStream outputStream = conn.getOutputStream();
+                 InputStream fileStream = requireActivity().getContentResolver().openInputStream(uri)) {
+                
+                String header = "--" + boundary + "\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n" +
+                    "Content-Type: application/octet-stream\r\n\r\n";
+                
+                outputStream.write(header.getBytes(StandardCharsets.UTF_8));
+                
                 byte[] buffer = new byte[8192];
                 int bytesRead;
+                long totalUploaded = 0;
                 while ((bytesRead = fileStream.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
+                    outputStream.write(buffer, 0, bytesRead);
+                    totalUploaded += bytesRead;
+                    int progress = (int) ((totalUploaded * 100) / fileSize);
+                    requireActivity().runOnUiThread(() -> uploadProgressDialog.setProgress(progress));
                 }
-                os.flush();
+                
+                outputStream.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
             }
 
-            responseCode = conn.getResponseCode();
-        } else {
-            throw new IOException("Expected redirect, got " + responseCode);
-        }
-
-        // Parse final response
-        if (responseCode == 200) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-
-            JSONObject json = new JSONObject(response.toString());
-            return "https://pixeldrain.com/u/" + json.getString("id");
-        } else {
-            InputStream errorStream = conn.getErrorStream();
-            StringBuilder errorResponse = new StringBuilder();
-            if (errorStream != null) {
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(errorStream));
-                String line;
-                while ((line = errorReader.readLine()) != null) {
-                    errorResponse.append(line);
+            if (conn.getResponseCode() == HttpURLConnection.HTTP_CREATED) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                    JSONObject json = new JSONObject(reader.readLine());
+                    if (!json.has("id")) throw new IOException("Missing file ID in response");
+                    return "https://pixeldrain.com/u/" + json.getString("id");
                 }
-                errorReader.close();
             } else {
-                errorResponse.append("No error stream available.");
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
+                    throw new IOException("Upload failed: " + reader.readLine());
+                }
             }
-
-            throw new IOException("Upload failed (" + responseCode + "): " + errorResponse);
+        } finally {
+            conn.disconnect();
         }
-
-    } finally {
-        if (fileStream != null) fileStream.close();
-        if (conn != null) conn.disconnect();
     }
-}
 
-
+    private String getFileNameFromUri(Uri uri) {
+        String result = null;
+        if (uri.getScheme().equals("content")) {
+            try (Cursor cursor = requireActivity().getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) result = cursor.getString(nameIndex);
+                }
+            } catch (Exception ignored) {}
+        }
+        if (result == null) {
+            result = uri.getLastPathSegment();
+            if (result != null && result.contains("/")) {
+                result = result.substring(result.lastIndexOf('/') + 1);
+            }
+        }
+        return result != null ? result : "file.apk";
+    }
 
     private String getFileSize(Uri uri) throws IOException {
-        InputStream inputStream = requireActivity().getContentResolver().openInputStream(uri);
-        int sizeInBytes = inputStream.available();
-        inputStream.close();
-        return (sizeInBytes / 1024) + " KB";
+        try (InputStream inputStream = requireActivity().getContentResolver().openInputStream(uri)) {
+            return (inputStream.available() / 1024) + " KB";
+        }
     }
 }
