@@ -4,4 +4,10 @@
     <color name="colorAccent">#2f45d4</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
+    <color name="light_gray_background">#F5F5F5</color>
+
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
+    <color name="light_gray_border">#E0E0E0</color>
+    <color name="light_gray_divider">#EEEEEE</color>
 </resources>

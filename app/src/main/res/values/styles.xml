@@ -20,4 +20,22 @@
 <!--        <item name="android:windowBackground">@drawable/splash_background</item>-->
     </style>
 
+    <style name="FormInputStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+    <item name="boxStrokeColor">@color/light_gray_border</item>
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="boxCornerRadiusBottomEnd">8dp</item>
+    <item name="boxCornerRadiusBottomStart">8dp</item>
+    <item name="boxCornerRadiusTopEnd">8dp</item>
+    <item name="boxCornerRadiusTopStart">8dp</item>
+    <item name="hintTextColor">@color/secondary_text</item>
+</style>
+
+<style name="FileSelectButtonStyle" parent="Widget.MaterialComponents.Button.OutlinedButton">
+    <item name="strokeColor">@color/colorPrimary</item>
+    <item name="strokeWidth">1dp</item>
+    <item name="android:textColor">@color/colorPrimary</item>
+    <item name="cornerRadius">8dp</item>
+</style>
+
 </resources>
