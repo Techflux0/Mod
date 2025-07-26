@@ -39,6 +39,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".WebViewDownloadActivity"
+    android:exported="true"
+    android:configChanges="orientation|screenSize"/>
+    
         <activity
             android:name=".MainActivity"
             android:exported="true"

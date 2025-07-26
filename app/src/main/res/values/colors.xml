@@ -7,12 +7,12 @@
     <color name="light_gray_background">#F5F5F5</color>
 
     <color name="primary_text">#212121</color>
-    <color name="secondary_text">#757575</color>
+    <color name="secondary_text">#0a0000</color>
     <color name="light_gray_border">#E0E0E0</color>
     <color name="light_gray_divider">#EEEEEE</color>
-    <color name="dark_background">#121212</color>
+    <color name="dark_background">#FFFFFF</color>
     <color name="card_background_dark">#FFFFFF</color>
-    <color name="secondary_icon">#FFFFFF</color>
-    <color name="primary_icon">#FFFFFF</color>
+    <color name="secondary_icon">#140606</color>
+    <color name="primary_icon">#140606</color>
     <color name="card_stroke">#FFFFFF</color>
 </resources>

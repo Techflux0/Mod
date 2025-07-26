@@ -52,6 +52,14 @@ public class MainActivity extends AppCompatActivity {
 
         checkStoragePermissionAndCreateDir();
 
+        // Set default fragment (Home) when activity is created
+        if (savedInstanceState == null) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, new ModsBrowserFragment())
+                    .commit();
+        }
+
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
@@ -115,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 createPoisonDirectory();
             } else {
-                Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Storage denied", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -123,14 +131,7 @@ public class MainActivity extends AppCompatActivity {
     private void createPoisonDirectory() {
         File dir = new File(Environment.getExternalStorageDirectory(), "poison");
         if (!dir.exists()) {
-            boolean success = dir.mkdirs();
-            if (success) {
-                Toast.makeText(this, "Poison directory created", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Failed to create poison directory", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            Toast.makeText(this, "Poison directory already exists", Toast.LENGTH_SHORT).show();
+            dir.mkdirs();
         }
     }
 }

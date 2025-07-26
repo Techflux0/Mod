@@ -1,14 +1,11 @@
 package io.mods;
 
 import android.animation.ObjectAnimator;
-import android.app.DownloadManager;
-import android.net.Uri;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Parcelable;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,31 +20,42 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.airbnb.lottie.LottieAnimationView;
 import com.bumptech.glide.Glide;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ModsBrowserFragment extends Fragment {
 
+    private static final String PREFS_NAME = "ModsPrefs";
+    private static final String MODS_CACHE_KEY = "cached_mods";
+    
     private FirebaseFirestore db;
     private List<Mod> allMods = new ArrayList<>();
     private ModsAdapter adapter;
     private LottieAnimationView loadingAnimation;
+    private SharedPreferences preferences;
+    private HorizontalScrollView recentScrollView;
+    private View rootView;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, 
                            @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.mods_browser, container, false);
+        rootView = inflater.inflate(R.layout.mods_browser, container, false);
+        
+        preferences = requireContext().getSharedPreferences(PREFS_NAME, 0);
         
         // Initialize views
-        loadingAnimation = view.findViewById(R.id.loading_animation);
-        RecyclerView modsRecycler = view.findViewById(R.id.mods_recycler);
-        ViewGroup recentContainer = view.findViewById(R.id.recent_container);
+        loadingAnimation = rootView.findViewById(R.id.loading_animation);
+        RecyclerView modsRecycler = rootView.findViewById(R.id.mods_recycler);
+        ViewGroup recentContainer = rootView.findViewById(R.id.recent_container);
+        recentScrollView = rootView.findViewById(R.id.recent_scroll);
         
         // Setup RecyclerView
         adapter = new ModsAdapter(allMods, this::showModDetails);
@@ -55,47 +63,79 @@ public class ModsBrowserFragment extends Fragment {
         modsRecycler.setAdapter(adapter);
         
         // Setup search
-        setupSearch(view.findViewById(R.id.search_input));
+        setupSearch(rootView.findViewById(R.id.search_input));
         
-        // Load data from Firestore
+        // Load data - first try cache, then network
         db = FirebaseFirestore.getInstance();
-        loadMods(recentContainer);
+        loadCachedMods(recentContainer);
+        loadModsFromNetwork(recentContainer);
         
-        return view;
-                }
-            
-        
-    
+        return rootView;
+    }
 
-private void loadMods(ViewGroup recentContainer) {
-    loadingAnimation.setVisibility(View.VISIBLE);
-    loadingAnimation.playAnimation();
-    
-    db.collection("mods")
-      .orderBy("createdAt", Query.Direction.DESCENDING)
-      .get()
-      .addOnCompleteListener(task -> {
-          if (task.isSuccessful()) {
-              allMods.clear();
-              for (QueryDocumentSnapshot document : task.getResult()) {
-                  // DEBUG: Log the entire document
-                  Log.d("FIRESTORE_DATA", "Document ID: " + document.getId() + 
-                       " | Data: " + document.getData());
-                  
-                  Mod mod = document.toObject(Mod.class);
-                  mod.setId(document.getId());
-                  
-                  // DEBUG: Verify URL loading
-                  Log.d("URL_DEBUG", "Loaded URL: " + mod.getApkUrl() +
-                       " | Exists in doc: " + document.contains("apk_url"));
-                  
-                  allMods.add(mod);
-              }
-              adapter.notifyDataSetChanged();
-          }
-          loadingAnimation.setVisibility(View.GONE);
-      });
-}
+    private void loadCachedMods(ViewGroup recentContainer) {
+        String cachedModsJson = preferences.getString(MODS_CACHE_KEY, null);
+        if (cachedModsJson != null) {
+            Type type = new TypeToken<List<Mod>>() {}.getType();
+            List<Mod> cachedMods = new Gson().fromJson(cachedModsJson, type);
+            if (cachedMods != null && !cachedMods.isEmpty()) {
+                updateUIWithMods(cachedMods, recentContainer);
+            }
+        }
+    }
+
+    private void loadModsFromNetwork(ViewGroup recentContainer) {
+        loadingAnimation.setVisibility(View.VISIBLE);
+        loadingAnimation.playAnimation();
+
+        db.collection("mods")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .get()
+            .addOnCompleteListener(task -> {
+                loadingAnimation.setVisibility(View.GONE);
+                
+                if (task.isSuccessful()) {
+                    List<Mod> freshMods = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : task.getResult()) {
+                        Mod mod = document.toObject(Mod.class);
+                        mod.setId(document.getId());
+                        freshMods.add(mod);
+                    }
+                    
+                    // Update UI
+                    updateUIWithMods(freshMods, recentContainer);
+                    
+                    // Cache the data
+                    cacheMods(freshMods);
+                }
+            });
+    }
+
+    private void updateUIWithMods(List<Mod> mods, ViewGroup recentContainer) {
+        allMods.clear();
+        allMods.addAll(mods);
+        adapter.notifyDataSetChanged();
+
+        recentContainer.removeAllViews();
+        int recentCount = Math.min(mods.size(), 5);
+        
+        for (int i = 0; i < recentCount; i++) {
+            addRecentModView(mods.get(i), recentContainer);
+        }
+
+        recentContainer.setVisibility(recentCount > 0 ? View.VISIBLE : View.GONE);
+        if (recentCount > 0 && recentScrollView != null) {
+            setupRecentModsAnimation();
+        }
+    }
+
+    private void cacheMods(List<Mod> mods) {
+        String modsJson = new Gson().toJson(mods);
+        preferences.edit()
+            .putString(MODS_CACHE_KEY, modsJson)
+            .apply();
+    }
+
     private void addRecentModView(Mod mod, ViewGroup container) {
         View view = LayoutInflater.from(getContext())
             .inflate(R.layout.recent_mod_item, container, false);
@@ -116,18 +156,21 @@ private void loadMods(ViewGroup recentContainer) {
     }
 
     private void setupRecentModsAnimation() {
-        HorizontalScrollView scrollView = getView().findViewById(R.id.recent_scroll);
-        scrollView.post(() -> {
-            scrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
-            ObjectAnimator animator = ObjectAnimator.ofInt(
-                scrollView,
-                "scrollX",
-                scrollView.getWidth(),
-                0
-            );
-            animator.setDuration(1000);
-            animator.setInterpolator(new AccelerateDecelerateInterpolator());
-            animator.start();
+        if (recentScrollView == null || !isAdded()) return;
+        
+        recentScrollView.post(() -> {
+            if (recentScrollView != null) {
+                recentScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
+                ObjectAnimator animator = ObjectAnimator.ofInt(
+                    recentScrollView,
+                    "scrollX",
+                    recentScrollView.getWidth(),
+                    0
+                );
+                animator.setDuration(1000);
+                animator.setInterpolator(new AccelerateDecelerateInterpolator());
+                animator.start();
+            }
         });
     }
 
@@ -155,27 +198,13 @@ private void loadMods(ViewGroup recentContainer) {
         adapter.updateList(filtered);
     }
 
-private void showModDetails(Mod mod) {
-    // 🔍 Log all mod details
-    Log.d("MOD_CLICKED", "Name: " + mod.getName() +
-        "\nVersion: " + mod.getVersion() +
-        "\nDesc: " + mod.getDescription() +
-        "\nFeatures: " + mod.getFeatures() +
-        "\nAPK URL: " + mod.getApkUrl() +
-        "\nIcon URL: " + mod.getModIconUrl() +
-        "\nArch: " + mod.getArchitecture() +
-        "\nSize: " + mod.getSize() +
-        "\nViews: " + mod.getViews() +
-        "\nDownloads: " + mod.getDownloads() +
-        "\nCreated At: " + mod.getCreatedAt());
-
-    ModDetailsFragment detailsFragment = ModDetailsFragment.newInstance(mod);
-    getParentFragmentManager().beginTransaction()
-        .replace(R.id.fragment_container, detailsFragment)
-        .addToBackStack(null)
-        .commit();
-}
-
+    private void showModDetails(Mod mod) {
+        ModDetailsFragment detailsFragment = ModDetailsFragment.newInstance(mod);
+        getParentFragmentManager().beginTransaction()
+            .replace(R.id.fragment_container, detailsFragment)
+            .addToBackStack(null)
+            .commit();
+    }
 
     private static class ModsAdapter extends RecyclerView.Adapter<ModsAdapter.ModViewHolder> {
         private List<Mod> mods;
@@ -213,13 +242,18 @@ private void showModDetails(Mod mod) {
             holder.modVersion.setText("v" + mod.getVersion());
             holder.modSize.setText(mod.getSize());
             
-            // Set architecture background color
-            if ("arm64".equalsIgnoreCase(mod.getArchitecture())) {
-                holder.modArch.setBackgroundResource(R.drawable.bg_arch_32);
-            } else {
-                holder.modArch.setBackgroundResource(R.drawable.bg_arch_32);
-            }
-            holder.modArch.setText(mod.getArchitecture().toUpperCase());
+            holder.modArch.setTypeface(null, android.graphics.Typeface.BOLD);
+            holder.modArch.setText(mod.getArchitecture().equalsIgnoreCase("arm64") ? "ARM64" : "ARM32");
+
+            int bgColor = mod.getArchitecture().equalsIgnoreCase("arm64") ? 0xFF1976D2 : 0xFF388E3C; 
+            float radius = holder.itemView.getResources().getDisplayMetrics().density * 12; 
+
+            android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
+            drawable.setColor(bgColor);
+            drawable.setCornerRadius(radius);
+
+            holder.modArch.setBackground(drawable);
+            holder.modArch.setTextColor(0xFFFFFFFF); 
             
             holder.modViews.setText(String.valueOf(mod.getViews()));
             holder.modDownloads.setText(String.valueOf(mod.getDownloads()));
