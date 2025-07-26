@@ -1,14 +1,17 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" 
     android:id="@+id/splashLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
-    android:gravity="center">
+    android:background="#ffffff">
 
-    <ImageView
-        android:layout_width="70dp"
-        android:layout_height="70dp"
-        android:src="@drawable/logo"
-        android:id="@+id/logo"
-        android:layout_centerInParent="true"/>
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/lottieView"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:layout_centerInParent="true"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        app:lottie_fileName="financial.json" />
+
 </RelativeLayout>
