@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="app_name">Mods</string>
     <string name="default_web_client_id">149603740705-k9gtrpavtur999b7imb2rr1v3g0j7rgs.apps.googleusercontent.com</string>
-
+    <string name="mod_icon_desc">Mod Icon</string>
+    <string name="description">Mod Name</string>
+    <string name="features">Features</string>
+    <string name="download_mod">Download Mod</string>
 </resources>

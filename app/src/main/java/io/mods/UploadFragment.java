@@ -273,7 +273,8 @@ public class UploadFragment extends Fragment {
 
     private String getFileSize(Uri uri) throws IOException {
         try (InputStream inputStream = requireActivity().getContentResolver().openInputStream(uri)) {
-            return (inputStream.available() / 1024) + " KB";
+            double sizeInMB = inputStream.available() / (1024.0 * 1024.0);
+            return String.format(Locale.getDefault(), "%.2f MB", sizeInMB);
         }
     }
 }

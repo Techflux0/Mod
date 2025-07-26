@@ -10,4 +10,9 @@
     <color name="secondary_text">#757575</color>
     <color name="light_gray_border">#E0E0E0</color>
     <color name="light_gray_divider">#EEEEEE</color>
+    <color name="dark_background">#121212</color>
+    <color name="card_background_dark">#FFFFFF</color>
+    <color name="secondary_icon">#FFFFFF</color>
+    <color name="primary_icon">#FFFFFF</color>
+    <color name="card_stroke">#FFFFFF</color>
 </resources>
